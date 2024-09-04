@@ -1,0 +1,299 @@
+
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+model User {
+  id                    String                 @id 
+  name                  String?
+  email                 String                @unique
+  image                 String?
+  password              String?
+  role                  UserRole               @default(USER)
+  sessions              Session[]
+  quizMarks             UserQuizMark[]
+  userQuizAnswers       UserQuizAnswer[]
+  blogs                 Blog[]
+  classComments         ClassComment[]
+  blogComments          BlogComment[]
+  blogCommentReplies    BlogCommentReply[]
+  classCommentReplies   ClassCommentReply[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+
+  user      User     @relation(references: [id], fields: [userId], onDelete: Cascade)
+  @@map("sessions")
+}
+
+model Course {
+  courseId        String   @id @default(cuid())
+  courseTitle     String
+  courseLabel     String
+  courseSlug      String   @unique
+  courseThumbnail String
+  placeholder     String   @default("chenge default value")
+  classes         Class[]
+  quizzes         Quiz[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("courses")
+}
+
+enum CourseStatus {
+  PUBLISHED
+  DRAFT
+  DELETED
+}
+
+enum ClassType {
+  TUTORIAL
+  QUIZ
+}
+
+model Class {
+  classId          String            @id @default(cuid())
+  ClassType        ClassType         @default(TUTORIAL)
+  courseId         String
+  classTitle       String
+  classSubTitle    String
+  classSlug        String            @unique
+  description      String
+  videoLink        String
+  downloadLink     String?
+  viewLink         String?
+  playlistLink     String
+  metaTitle        String
+  metaDescription  String
+  metaTags         String
+  fileLinks        FileLink[]
+  commands         Command[]
+  commandNextSteps CommandNextStep[]
+  comments         ClassComment[]
+  views            Int               @default(0)
+  status           CourseStatus      @default(DRAFT)
+  course           Course            @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@map("classes")
+}
+
+model FileLink {
+  fileLinkId Int    @id @default(autoincrement())
+  classId    String
+  fileTitle  String
+  fileLink   String
+  class      Class  @relation(fields: [classId], references: [classId], onDelete: Cascade)
+
+  @@map("filelinks")
+}
+
+model Command {
+  conmandId Int    @id @default(autoincrement())
+  classId   String
+  command   String
+  class     Class  @relation(fields: [classId], references: [classId], onDelete: Cascade)
+
+  @@map("commands")
+}
+
+model CommandNextStep {
+  conmandNSId Int    @id @default(autoincrement())
+  classId     String
+  step        String
+  class       Class  @relation(fields: [classId], references: [classId], onDelete: Cascade)
+
+  @@map("commandnextsteps")
+}
+
+model Quiz {
+  quizId              String               @id @default(cuid())
+  ClassType           ClassType            @default(QUIZ)
+  courseId            String
+  quizSlug            String               @unique
+  quizTitle           String
+  quizSubTitle        String
+  metaTitle           String
+  metaDescription     String
+  metaTags            String
+  quizQuestionAnswers QuizQuestionAnswer[]
+  totalFinished       UserQuizMark[]
+  userQuizAnswers     UserQuizAnswer[]
+  views               Int                  @default(0)
+  status              CourseStatus         @default(DRAFT)
+  course              Course               @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@map("quizzes")
+}
+
+model QuizQuestionAnswer {
+  quizQAId            String               @id @default(cuid())
+  quizId              String
+  index               Int
+  question            String
+  quizQuestionOptions QuizQuestionOption[]
+  answer              String
+  quiz                Quiz                 @relation(fields: [quizId], references: [quizId], onDelete: Cascade)
+
+  @@map("quizQuestionAnswers")
+}
+
+model QuizQuestionOption {
+  quizQuestionOptionId String             @id @default(cuid())
+  quizQAId             String
+  option               String
+  quizQuestionAnswer   QuizQuestionAnswer @relation(fields: [quizQAId], references: [quizQAId], onDelete: Cascade)
+
+  @@map("quizquestionoptions")
+}
+
+model UserQuizMark {
+  quizMarkId Int    @id @default(autoincrement())
+  quizId     String
+  courseSlug String
+  userId     String
+  mark       Int
+  total      Int
+  quiz       Quiz   @relation(fields: [quizId], references: [quizId], onDelete: Cascade)
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, userId])
+  @@map("UserQuizMarks")
+}
+
+model UserFinishedQuiz {
+  id      Int              @id @default(autoincrement())
+  answers UserQuizAnswer[]
+}
+
+model UserQuizAnswer {
+  userQuizAnswerId   Int              @id @default(autoincrement())
+  userFinishedQuizId Int
+  quizId             String
+  userId             String
+  quizQAId           String
+  answer             String
+  quiz               Quiz             @relation(fields: [quizId], references: [quizId], onDelete: Cascade)
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userFinishedQuiz   UserFinishedQuiz @relation(fields: [userFinishedQuizId], references: [id], onDelete: Cascade)
+
+  @@map("UserQuizAnswers")
+}
+
+enum BlogStatus {
+  PUBLISHED
+  DRAFT
+  DELETED
+}
+
+model Blog {
+  blogId          String        @id @default(cuid())
+  authorId        String
+  blogTitle       String
+  blogSlug        String        @unique
+  blogThumbnail   String
+  placeholder     String        @default("chenge default value")
+  blogContent     String
+  metaTitle       String
+  metaDescription String
+  metaTags        String
+  status          BlogStatus
+  comments        BlogComment[]
+  views           Int           @default(0)
+  isFeatured      Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  author          User          @relation(fields: [authorId], references: [id])
+
+  @@map("blogs")
+}
+
+model ClassComment {
+  commentId      String              @id @default(cuid())
+  classId        String
+  userId         String
+  content        String
+  edited         Boolean             @default(false)
+  commentReplies ClassCommentReply[]
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class          Class               @relation(fields: [classId], references: [classId], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@map("classComments")
+}
+
+model BlogComment {
+  commentId      String             @id @default(cuid())
+  blogId         String
+  userId         String
+  content        String
+  edited         Boolean            @default(false)
+  commentReplies BlogCommentReply[]
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog           Blog               @relation(fields: [blogId], references: [blogId], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@map("blogComments")
+}
+
+model ClassCommentReply {
+  commentReplyId String       @id @default(cuid())
+  commentId      String
+  userId         String
+  content        String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ClassComment   ClassComment @relation(fields: [commentId], references: [commentId], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("classCommentReplies")
+}
+
+model BlogCommentReply {
+  commentReplyId String      @id @default(cuid())
+  commentId      String
+  userId         String
+  content        String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blogComment    BlogComment @relation(fields: [commentId], references: [commentId], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@map("BlogCommentReplies")
+}
+
+model Analytics {
+  viewId      String @id @default(cuid())
+  date        String
+  browser     String
+  device      String
+  os          String
+  searchField String @unique @default("unique search field")
+  views       Int    @default(0)
+}
